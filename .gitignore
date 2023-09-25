@@ -1,6 +1,8 @@
-code/use/
+code_use/
 models/
 results/
 test/
 videos/
+hist_backproj_test/
+make_Foreground_test/
 Tracking.pptx
