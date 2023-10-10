@@ -47,6 +47,7 @@ def save_output(image_name,pred,d_dir):
     img_name = image_name.split(os.sep)[-1]
     image = io.imread(image_name) # 원본
     image_origin = io.imread(image_name) # 원본
+    image_for_forg = io.imread(image_name)
     imo = im.resize((image.shape[1],image.shape[0]),resample=Image.BILINEAR) # mask(pred)
     pb_np = np.array(imo)
     
@@ -86,12 +87,16 @@ def save_output(image_name,pred,d_dir):
     # dst = cv2.cvtColor(dst, cv2.COLOR_RGB2BGR)
     ###############################################
 
-    # dst = cv2.copyTo(image, gray_mask_array)
-    foreground_img = Image.fromarray(dst)
+    dst_foreground = cv2.copyTo(image_for_forg, gray_mask_array)
+    foreground_img = Image.fromarray(dst_foreground)
+    fillpoly_img = Image.fromarray(dst)
     path_to_save_file = os.path.join(d_dir, imidx+'_mask.png')
-    path_to_save_file_foreground = os.path.join(d_dir, imidx+'_inference.png')
+    path_to_save_file_fillpoly_img = os.path.join(d_dir, imidx+'_inference.png')
+    path_to_save_file_foreground_img = os.path.join(d_dir, imidx+'_foreground.png')
+
     imo.save(path_to_save_file)
-    foreground_img.save(path_to_save_file_foreground)
+    foreground_img.save(path_to_save_file_foreground_img)
+    fillpoly_img.save(path_to_save_file_fillpoly_img)
 
 def main():
 
@@ -99,7 +104,7 @@ def main():
     model_name='u2net'#u2netp
 
     dict_models = { 
-                    '{version}_{epoch}' : r'{model_path}',
+                    '2.0_250000' : r'/workspace/U-2-Net/saved_models/training_data_2.0/u2net_bce_itr_250000_train_0.184458_tar_0.019536.pth',
                     }
 
     # prediction_root_dir = r'/workspace/U-2-Net/results/model1.3_testdata3.0.1'
@@ -187,6 +192,10 @@ def main():
         
             list_image_forvideo = [image_ for image_ in os.listdir(video_output_folder) if image_[-13:] == 'inference.png']
             list_image_forvideo = sorted(list_image_forvideo)
+
+            list_image_forvideo_forg = [image_ for image_ in os.listdir(video_output_folder) if image_[-14:] == 'foreground.png']
+            list_image_forvideo_forg = sorted(list_image_forvideo_forg)
+
             print(list_image_forvideo)
             ###
             fps = 30
@@ -194,15 +203,24 @@ def main():
             vid_w, vid_h = image_sample.shape[1], image_sample.shape[0]
             fourcc  = cv2.VideoWriter_fourcc(*'mp4v')
             video_output_path = os.path.join(path_videos, f'{video_[:-4]}_inferenced.mp4')
+            video_output_path_forg = os.path.join(path_videos, f'{video_[:-4]}_foreground.mp4')
             vid_out = cv2.VideoWriter(video_output_path, fourcc, fps, (vid_w, vid_h))
+            vid_out_forg = cv2.VideoWriter(video_output_path_forg, fourcc, fps, (vid_w, vid_h))
             ###
             for image_ in list_image_forvideo:
                 path_image = os.path.join(video_output_folder, image_)
                 print(image_)
                 imread = cv2.imread(path_image)
                 vid_out.write(imread)
+            
+            for image_ in list_image_forvideo_forg:
+                path_image = os.path.join(video_output_folder, image_)
+                print(image_)
+                imread = cv2.imread(path_image)
+                vid_out_forg.write(imread)
 
             vid_out.release()
+            vid_out_forg.release()
 
 if __name__ == "__main__":
     main()
