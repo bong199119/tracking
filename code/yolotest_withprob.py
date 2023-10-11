@@ -21,11 +21,8 @@ import os
 
 start_time = time.time()
 
-model = YOLO('/home/jkim/workspace/object_detection/yolov8/models/best_4thdataset.pt')  # pretrained YOLOv8n model
-video_folder_path = r'/home/jkim/workspace/object_detection/yolov8/videos/for_trackingsample'
-# path_results = r'/home/bseo/workspace/object_detection/yolov8/img'
-# video_path = "/home/bseo/workspace/object_detection/yolov8/videos/clip.mp4"
-
+model = YOLO('')  # pretrained YOLOv8n model
+video_folder_path = r''
 list_videos = os.listdir(video_folder_path)
 
 for videos_ in list_videos:
@@ -74,7 +71,7 @@ for videos_ in list_videos:
         # Break the loop if the end of the video is reached
             break
 
-    df_total = pd.DataFrame(data = list_total, columns = ["Frame","Obturator (OBTL-UCUK)", "Trocar (TRCL-UCUK)", "Ligasure (COVIDIEN) (LGSL-MACV)", "Graspers", "Polymer Clip Applier (CLAL-UCUK)", "Dissector", "Gauze (GAUL-UCUK)", "Linear Stapler", "Needle Holder (AESCULAP) (NDHL-UCAE)", "Specimen Retrieval Bag (RTBL-UCUK)", "Suction Irrigator", "Drain (JPCL-UCUK)"])
+    df_total = pd.DataFrame(data = list_total, columns = [])
     # df_total = pd.DataFrame(data = list_total, columns = ["Bleeding"])
     df_total.to_csv(csv_path, index = False)
     

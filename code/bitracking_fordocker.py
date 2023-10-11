@@ -109,8 +109,10 @@ def return_output(image_name,pred):
 
 path_model_u2net = r''
 path_vidieos_folder = r''
-all_files   = os.listdir(path_vidieos_folder)
-list_videos = [ fname for fname in all_files if fname.endswith('.mp4')]
+# all_files   = os.listdir(path_vidieos_folder)
+# list_videos = [ fname for fname in all_files if fname.endswith('.mp4')]
+list_videos = [
+    ]
 
 model_name='u2net'#u2netp
 if(model_name=='u2net'):
@@ -155,7 +157,7 @@ for videos_ in list_videos:
     list_total = []
     time.sleep(1)
 
-    video_output_path = os.path.join(path_vidieos_folder, videos_[:-4]+f'_tracked_CSRT'+videos_[-4:])
+    video_output_path = os.path.join(path_vidieos_folder, videos_[:-4]+f'_bitracked_GOTURN'+videos_[-4:])
     fourcc  = cv2.VideoWriter_fourcc(*'mp4v')
     vid_out = cv2.VideoWriter(video_output_path, fourcc, fps, (vid_w, vid_h))
     """
@@ -167,7 +169,8 @@ for videos_ in list_videos:
 
     tracker_init = 0;
     
-    tracker = cv2.legacy.TrackerCSRT_create()
+    # tracker = cv2.legacy.TrackerCSRT_create()
+    tracker = cv2.TrackerGOTURN_create()
     # tracker = cv2.legacy.TrackerMOSSE_create()
 
     while cap.isOpened():
@@ -248,7 +251,8 @@ for videos_ in list_videos:
                                     #cv2.imwrite(path_results + f"/object_{frame_num}_{round(cls_id)}.png", targetimg)
                                     #####################
                                     #####################
-                                    tracker = cv2.legacy.TrackerCSRT_create()
+                                    # tracker = cv2.legacy.TrackerCSRT_create()
+                                    tracker = cv2.TrackerGOTURN_create()
                                     tracker.init(frame_foreground, targetbox)
                                     tracker_init = 1
                                     #####################

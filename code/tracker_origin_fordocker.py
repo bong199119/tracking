@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import cv2
 import sys
-from torch.autograd import Variable
 # import moviepy.editor as mp
 from tqdm import tqdm
 import time
@@ -19,121 +18,32 @@ from PIL import ImageFilter
 from ultralytics import YOLO
 import cv2
 import os
-import glob
-
-import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms#, utils
-
-from data_loader import RescaleT
-from data_loader import ToTensor
-from data_loader import ToTensorLab
-from data_loader import SalObjDataset
-
-from model import U2NET # full size version 173.6 MB
-from model import U2NETP # small version u2net 4.7 MB
-from skimage import io, transform
 
 model = YOLO('')  # pretrained YOLOv8n model
 
-def normPRED(d):
-    ma = torch.max(d)
-    mi = torch.min(d)
-
-    dn = (d-mi)/(ma-mi)
-
-    return dn
-
-def hex2RGB(color_hex):
-    color_hex = color_hex.lstrip('#')
-    color_RGB = tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
-    return color_RGB
-
-def return_output(image_name,pred):
-    predict = pred
-    predict = predict.squeeze()
-    predict_np = predict.cpu().data.numpy()
-    alpha = 0.8 # 높을수록 라벨링 투명도가 높음
-
-    im = Image.fromarray(predict_np*255).convert('RGB')
-    img_name = image_name.split(os.sep)[-1]
-    image = io.imread(image_name) # 원본
-    image_origin = io.imread(image_name) # 원본
-    imo = im.resize((image.shape[1],image.shape[0]),resample=Image.BILINEAR) # mask(pred)
-    pb_np = np.array(imo)
-    
-    aaa = img_name.split(".")
-    bbb = aaa[0:-1]
-    imidx = bbb[0]
-    for i in range(1,len(bbb)):
-        imidx = imidx + "." + bbb[i]
-
-    # mask = np.zeros(image.shape[:2],np.uint8)
-    # mask[100:150,100:200] = 255
-
-    gray_mask  = imo.convert('L')
-    gray_mask_array = np.array(gray_mask)
-
-    # find contours from mask(array)##############
-    contours, _ = cv2.findContours(gray_mask_array, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-
-    for obj in contours:
-        polygons = []
-        polygons_tmp = []
-        
-        for point in obj:
-            coords = []
-            coords.append(int(point[0][0]))
-            coords.append(int(point[0][1]))
-
-            polygons_tmp.append(coords)
-        polygons.append(polygons_tmp)
-
-        list_polygons = np.array(polygons, dtype=np.int32)
-        color_hex = '#388E3C'
-        color_RGB = hex2RGB(color_hex)
-        # img_read = cv2.fillPoly(image, [list_polygons], color_RGB)
-    # dst = cv2.addWeighted(image_origin, alpha, img_read, (1-alpha), 0) 
-    # dst = cv2.cvtColor(dst, cv2.COLOR_RGB2BGR)
-    ###############################################
-    dst = cv2.copyTo(image, gray_mask_array)
-    image_name_foreground = image_name[:-4] + '_foreground' + image_name[-4:]
-    cv2.imwrite(image_name_foreground, dst)
-    # foreground_img = Image.fromarray(dst)
-    # path_to_save_file = os.path.join(d_dir, imidx+'_mask.png')
-    # path_to_save_file_foreground = os.path.join(d_dir, imidx+'_inference.png')
-    # imo.save(path_to_save_file)
-    # foreground_img.save(path_to_save_file_foreground)
-
-    return dst
-
-path_model_u2net = r''
 path_vidieos_folder = r''
-all_files   = os.listdir(path_vidieos_folder)
-list_videos = [ fname for fname in all_files if fname.endswith('.mp4')]
+# all_files   = os.listdir(path_vidieos_folder)
+# list_videos = [ fname for fname in all_files if fname.endswith('.mp4')]
+list_videos = [
+]
 
-model_name='u2net'#u2netp
-if(model_name=='u2net'):
-    print("...load U2NET---173.6 MB")
-    net = U2NET(3,1)
-elif(model_name=='u2netp'):
-    print("...load U2NEP---4.7 MB")
-    net = U2NETP(3,1)
-
-if torch.cuda.is_available():
-    net.load_state_dict(torch.load(path_model_u2net))
-    net.cuda()
-else:
-    net.load_state_dict(torch.load(path_model_u2net, map_location='cpu'))
-net.eval()
+# dict_tracker = {
+#     'csrt' : cv2.legacy.TrackerCSRT_create(),
+#     'kcf' : cv2.legacy.TrackerKCF_create(), 
+#     'boosting' : cv2.legacy.TrackerBoosting_create(),
+#     'mil' : cv2.legacy.TrackerMIL_create(),
+#     'tld' : cv2.legacy.TrackerTLD_create(),
+#     'medianflow' : cv2.legacy.TrackerMedianFlow_create(),
+#     'mosse' : cv2.legacy.TrackerMOSSE_create()
+# }
 
 print('[ CV ver.', cv2.__version__, ']')
 for videos_ in list_videos:
-    path_inferencedfolder = os.path.join(path_vidieos_folder, videos_[:-4])
-    os.makedirs(path_inferencedfolder, exist_ok=True)
-
     print(list_videos)
+    #video_path = os.path.join(video_folder_path, videos_)
+    # video_path = './input/output_detecting_5_src.mp4';
     video_path = os.path.join(path_vidieos_folder, videos_)
+    #csv_path = os.path.join(video_folder_path, videos_[:-3]+'csv')
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -153,11 +63,13 @@ for videos_ in list_videos:
     frame_num = 0
     video_num = 1
     list_total = []
+    # print('length',length)
     time.sleep(1)
 
-    video_output_path = os.path.join(path_vidieos_folder, videos_[:-4]+f'_tracked_CSRT'+videos_[-4:])
+    video_output_path = os.path.join(path_vidieos_folder, videos_[:-4]+f'_tracked_GOTURN'+videos_[-4:])
     fourcc  = cv2.VideoWriter_fourcc(*'mp4v')
     vid_out = cv2.VideoWriter(video_output_path, fourcc, fps, (vid_w, vid_h))
+    #print(' > OUTPUT: ', video_output_path)
     """
     if not vid_out.isOpened():
         print(' > FAILED TO CREATE OUTPUT VIDEO')
@@ -167,7 +79,8 @@ for videos_ in list_videos:
 
     tracker_init = 0;
     
-    tracker = cv2.legacy.TrackerCSRT_create()
+    # tracker = cv2.legacy.TrackerCSRT_create()
+    tracker = cv2.TrackerGOTURN_create()
     # tracker = cv2.legacy.TrackerMOSSE_create()
 
     while cap.isOpened():
@@ -177,46 +90,18 @@ for videos_ in list_videos:
                 if frame_num % 100 == 0:
                     print(' > frame_num: ',frame_num,', ', (frame_num*100) / length,'%')
                 
+                #list_temp = [frame_num,0,0,0,0,0,0,0,0,0,0,0,0]
+                
+                # Run YOLOv8 inference on the frame
                 results = model(frame, verbose=False)
-                ###############################################################
-                vid_idx_08d = (8-len(str(frame_num)))*'0'+str(frame_num)
-                path_img_ele = os.path.join(path_inferencedfolder, videos_[:-4]+f'_{vid_idx_08d}.png')
-                cv2.imwrite(path_img_ele, frame)
-                img_name_list = [path_img_ele]
-
-                test_salobj_dataset = SalObjDataset(img_name_list = img_name_list,
-                                                lbl_name_list = [],
-                                                transform=transforms.Compose([RescaleT(320),
-                                                                            ToTensorLab(flag=0)])
-                                                )
-                test_salobj_dataloader = DataLoader(test_salobj_dataset,
-                                                    batch_size=1,
-                                                    shuffle=False,
-                                                    num_workers=1)
-                
-                
-
-                for i_test, data_test in enumerate(test_salobj_dataloader):
-
-                    print("inferencing:",img_name_list[i_test].split(os.sep)[-1])
-                    inputs_test = data_test['image']
-                    inputs_test = inputs_test.type(torch.FloatTensor)
-                    if torch.cuda.is_available():
-                        inputs_test = Variable(inputs_test.cuda())
-                    else:
-                        inputs_test = Variable(inputs_test)
-
-                    d1,d2,d3,d4,d5,d6,d7= net(inputs_test)
-
-                    # normalization
-                    pred = d1[:,0,:,:]
-                    pred = normPRED(pred)
-
-                    frame_foreground = return_output(img_name_list[i_test], pred)
-                    del d1,d2,d3,d4,d5,d6,d7
-                ###############################################################
-
+            
                 det_frame = results[0].plot()
+                #cv2.imwrite(path_results + f"/det_{frame_num}.png", det_frame)
+                results = model(frame, verbose=False)
+                #vid_out.write(frame)
+
+                #if frame_num > 10:
+                #    break;
                 tracker_init = 0
 
                 for result in results:
@@ -248,8 +133,9 @@ for videos_ in list_videos:
                                     #cv2.imwrite(path_results + f"/object_{frame_num}_{round(cls_id)}.png", targetimg)
                                     #####################
                                     #####################
-                                    tracker = cv2.legacy.TrackerCSRT_create()
-                                    tracker.init(frame_foreground, targetbox)
+                                    # tracker = cv2.legacy.TrackerCSRT_create()
+                                    tracker = cv2.TrackerGOTURN_create()
+                                    tracker.init(frame, targetbox)
                                     tracker_init = 1
                                     #####################
                                     #####################
@@ -257,7 +143,7 @@ for videos_ in list_videos:
                         j+=1;
 
                 if frame_num > 0:
-                    ret, rc = tracker.update(frame_foreground)
+                    ret, rc = tracker.update(frame)
                     rc = tuple([int(_) for _ in rc])
                     #cv2.rectangle(frame, rc, (0, 0, 255), 2)
                     #cv2.imwrite(path_results + f"/track_{frame_num}.png", frame)
